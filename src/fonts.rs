@@ -6,6 +6,8 @@ use std::sync::Arc;
 
 pub const BOLD: &str = "bold";
 pub const HEAVY: &str = "heavy";
+/// 숫자 · 라틴 글자 — 원작처럼 세리프 + 옛 숫자꼴(Georgia: 기본이 옛 숫자꼴, macOS · Windows 기본 글꼴). 없으면 굵은 한글 글꼴
+pub const NUM: &str = "num";
 
 /// (보통, 굵게, 아주 굵게) — 같은 파일이면 면 번호만 다르다
 fn candidates() -> Vec<(std::path::PathBuf, u32, Option<(std::path::PathBuf, u32)>, Option<(std::path::PathBuf, u32)>)> {
@@ -44,9 +46,16 @@ pub fn install(ctx: &egui::Context) -> Option<std::path::PathBuf> {
         }
         found = Some(p); break;
     }
+    // 숫자 글꼴 (Georgia Bold) → 굵은 한글 → 나머지
+    let georgia: Vec<std::path::PathBuf> = if cfg!(target_os = "macos") { vec!["/System/Library/Fonts/Supplemental/Georgia Bold.ttf".into(), "/Library/Fonts/Georgia Bold.ttf".into()] }
+        else if cfg!(target_os = "windows") { let win = std::env::var("WINDIR").unwrap_or_else(|_| "C:\\Windows".into()); vec![format!("{win}\\Fonts\\georgiab.ttf").into()] } else { vec![] };
+    let mut num_fam: Vec<String> = Vec::new();
+    if let Some(b) = georgia.iter().find_map(|p| std::fs::read(p).ok()) { defs.font_data.insert("num-serif".into(), Arc::new(egui::FontData::from_owned(b))); num_fam.push("num-serif".into()); }
+    for f in defs.families.get(&egui::FontFamily::Name(BOLD.into())).cloned().unwrap_or_default() { if !num_fam.contains(&f) { num_fam.push(f); } }
+    defs.families.insert(egui::FontFamily::Name(NUM.into()), num_fam);
     if found.is_none() {
         log::warn!("한글 글꼴을 찾지 못했다 — 한글이 네모로 보일 수 있다");
-        for name in [BOLD, HEAVY] { let fam: Vec<String> = defs.families.get(&egui::FontFamily::Proportional).cloned().unwrap_or_default(); defs.families.insert(egui::FontFamily::Name(name.into()), fam); }
+        for name in [BOLD, HEAVY, NUM] { let fam: Vec<String> = defs.families.get(&egui::FontFamily::Proportional).cloned().unwrap_or_default(); defs.families.insert(egui::FontFamily::Name(name.into()), fam); }
     }
     ctx.set_fonts(defs);
     found
@@ -54,3 +63,5 @@ pub fn install(ctx: &egui::Context) -> Option<std::path::PathBuf> {
 
 pub fn bold(size: f32) -> egui::FontId { egui::FontId::new(size, egui::FontFamily::Name(BOLD.into())) }
 pub fn heavy(size: f32) -> egui::FontId { egui::FontId::new(size, egui::FontFamily::Name(HEAVY.into())) }
+/// 숫자 · 라틴 세리프 (옛 숫자꼴). 한글은 굵은 한글 글꼴로 이어진다
+pub fn num(size: f32) -> egui::FontId { egui::FontId::new(size, egui::FontFamily::Name(NUM.into())) }

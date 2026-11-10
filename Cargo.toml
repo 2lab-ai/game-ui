@@ -25,3 +25,7 @@ png = { version = "0.18", optional = true }
 [[example]]
 name = "gallery"
 required-features = ["snapshot"]
+
+[[example]]
+name = "icons"
+required-features = ["snapshot"]
