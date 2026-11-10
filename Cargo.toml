@@ -1,10 +1,10 @@
 [package]
 name = "game-ui"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "UNLICENSED"
 publish = false
-description = "Game UI kit for egui — framed windows, hand cursor, command menus, gauges, message windows, vector icons (extracted from deskarium)"
+description = "egui game UI kit in the Final Fantasy Tactics screen language — Classic plates, hand cursor, command menus, gauges, notices, vector icons (extracted from deskarium)"
 
 [lib]
 name = "game_ui"
