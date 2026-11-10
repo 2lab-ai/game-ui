@@ -1,4 +1,4 @@
-//! 글꼴 — OS 기본 한글 글꼴(라틴 포함)을 읽어 쓴다: macOS Apple SD Gothic Neo · Windows 맑은 고딕.
+//! 글꼴 — OS 기본 한글 글꼴(라틴 포함)을 읽어 쓴다: macOS Apple SD Gothic Neo · Windows 맑은 고딕 · 리눅스 Noto Sans CJK KR(없으면 나눔고딕).
 //! 바이너리에 글꼴을 싣지 않는다 (수 MB). 둘 다 해당 OS에 기본 설치되어 있다.
 //! egui 기본 글꼴(라틴·흑백 이모지·아이콘)은 한글 뒤 대체 글꼴로 붙인다 — 도구 아이콘(⛰ 🌋 ☄ …)이 네모로 보이지 않게.
 //! 제목·버튼용 굵은 글꼴 `bold`와 로고용 `heavy`도 같은 파일(.ttc의 다른 면, 또는 같은 계열 파일)에서 가져온다.
@@ -22,8 +22,16 @@ fn candidates() -> Vec<(std::path::PathBuf, u32, Option<(std::path::PathBuf, u32
         v.push((format!("{win}\\Fonts\\malgun.ttf").into(), 0, Some((bd.clone(), 0)), Some((bd, 0))));
         v.push((format!("{win}\\Fonts\\gulim.ttc").into(), 0, None, None));
     } else {
-        v.push(("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc".into(), 0, None, None));
-        v.push(("/usr/share/fonts/truetype/nanum/NanumGothic.ttf".into(), 0, None, None));
+        // 리눅스: Noto Sans CJK(.ttc 1번 면 = KR) — Arch/CachyOS · Debian/Ubuntu · Fedora 경로. 없으면 나눔고딕
+        for dir in ["/usr/share/fonts/noto-cjk", "/usr/share/fonts/opentype/noto", "/usr/share/fonts/google-noto-sans-cjk-fonts", "/usr/share/fonts/noto-cjk-fonts"] {
+            let f = |w: &str| -> std::path::PathBuf { format!("{dir}/NotoSansCJK-{w}.ttc").into() };
+            let (bd, bk) = (f("Bold"), f("Black"));
+            v.push((f("Regular"), 1, bd.exists().then(|| (bd.clone(), 1)), Some(if bk.exists() { (bk, 1) } else { (bd, 1) })));
+        }
+        for dir in ["/usr/share/fonts/truetype/nanum", "/usr/share/fonts/nanum", "/usr/share/fonts/TTF"] {
+            let f = |w: &str| -> std::path::PathBuf { format!("{dir}/NanumGothic{w}.ttf").into() };
+            v.push((f(""), 0, Some((f("Bold"), 0)), Some((f("ExtraBold"), 0))));
+        }
     }
     v
 }
@@ -48,7 +56,11 @@ pub fn install(ctx: &egui::Context) -> Option<std::path::PathBuf> {
     }
     // 숫자 글꼴 (Georgia Bold) → 굵은 한글 → 나머지
     let georgia: Vec<std::path::PathBuf> = if cfg!(target_os = "macos") { vec!["/System/Library/Fonts/Supplemental/Georgia Bold.ttf".into(), "/Library/Fonts/Georgia Bold.ttf".into()] }
-        else if cfg!(target_os = "windows") { let win = std::env::var("WINDIR").unwrap_or_else(|_| "C:\\Windows".into()); vec![format!("{win}\\Fonts\\georgiab.ttf").into()] } else { vec![] };
+        else if cfg!(target_os = "windows") { let win = std::env::var("WINDIR").unwrap_or_else(|_| "C:\\Windows".into()); vec![format!("{win}\\Fonts\\georgiab.ttf").into()] }
+        // 리눅스엔 Georgia가 없다 — 굵은 세리프(Noto Serif · DejaVu Serif · Liberation Serif)로 대신한다 (옛 숫자꼴은 아니다)
+        else { ["/usr/share/fonts/noto/NotoSerif-Bold.ttf", "/usr/share/fonts/truetype/noto/NotoSerif-Bold.ttf", "/usr/share/fonts/google-noto/NotoSerif-Bold.ttf",
+                "/usr/share/fonts/TTF/DejaVuSerif-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", "/usr/share/fonts/dejavu-serif-fonts/DejaVuSerif-Bold.ttf",
+                "/usr/share/fonts/liberation/LiberationSerif-Bold.ttf", "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf"].iter().map(|p| p.into()).collect() };
     let mut num_fam: Vec<String> = Vec::new();
     if let Some(b) = georgia.iter().find_map(|p| std::fs::read(p).ok()) { defs.font_data.insert("num-serif".into(), Arc::new(egui::FontData::from_owned(b))); num_fam.push("num-serif".into()); }
     for f in defs.families.get(&egui::FontFamily::Name(BOLD.into())).cloned().unwrap_or_default() { if !num_fam.contains(&f) { num_fam.push(f); } }
