@@ -1,0 +1,27 @@
+[package]
+name = "game-ui"
+version = "0.1.0"
+edition = "2021"
+license = "UNLICENSED"
+publish = false
+description = "Game UI kit for egui — framed windows, hand cursor, command menus, gauges, message windows, vector icons (extracted from deskarium)"
+
+[lib]
+name = "game_ui"
+
+[features]
+default = []
+# 창 없이 그려 PNG로 남긴다 (갤러리 · 시각 회귀 시험)
+snapshot = ["dep:egui-wgpu", "dep:wgpu", "dep:pollster", "dep:png"]
+
+[dependencies]
+egui = { version = "0.37", features = ["monochrome_emoji_fonts"] }
+log = "0.4"
+egui-wgpu = { version = "0.37", optional = true }
+wgpu = { version = "30.0.1", optional = true }
+pollster = { version = "0.4", optional = true }
+png = { version = "0.18", optional = true }
+
+[[example]]
+name = "gallery"
+required-features = ["snapshot"]
